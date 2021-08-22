@@ -1,0 +1,13 @@
+diff --git a/node_modules/electron-publish/out/publisher.js b/node_modules/electron-publish/out/publisher.js
+index 2358e2a..5b0608f 100644
+--- a/node_modules/electron-publish/out/publisher.js
++++ b/node_modules/electron-publish/out/publisher.js
+@@ -55,7 +55,7 @@ class HttpPublisher extends Publisher {
+         }
+         const fileStat = await fs_extra_1.stat(task.file);
+         const progressBar = this.createProgressBar(fileName, fileStat.size);
+-        await this.doUpload(fileName, task.arch || builder_util_1.Arch.x64, fileStat.size, (request, reject) => {
++        return this.doUpload(fileName, task.arch || builder_util_1.Arch.x64, fileStat.size, (request, reject) => {
+             if (progressBar != null) {
+                 // reset (because can be called several times (several attempts)
+                 progressBar.update(0);

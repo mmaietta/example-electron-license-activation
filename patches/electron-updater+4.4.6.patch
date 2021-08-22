@@ -1,0 +1,107 @@
+diff --git a/node_modules/electron-updater/out/AppUpdater.js b/node_modules/electron-updater/out/AppUpdater.js
+index 42ed9a3..b349170 100644
+--- a/node_modules/electron-updater/out/AppUpdater.js
++++ b/node_modules/electron-updater/out/AppUpdater.js
+@@ -120,6 +120,14 @@ class AppUpdater extends events_1.EventEmitter {
+         this._channel = value;
+         this.allowDowngrade = true;
+     }
++    /**
++     *  Shortcut for explicitly adding auth tokens to request headers
++     */
++    addAuthHeader(token) {
++        this.requestHeaders = Object.assign({}, this.requestHeaders, {
++            authorization: token,
++        });
++    }
+     // noinspection JSMethodCanBeStatic,JSUnusedGlobalSymbols
+     get netSession() {
+         return electronHttpExecutor_1.getNetSession();
+diff --git a/node_modules/electron-updater/out/MacUpdater.js b/node_modules/electron-updater/out/MacUpdater.js
+index 548811d..d20cab6 100644
+--- a/node_modules/electron-updater/out/MacUpdater.js
++++ b/node_modules/electron-updater/out/MacUpdater.js
+@@ -42,7 +42,7 @@ class MacUpdater extends AppUpdater_1.AppUpdater {
+             log.warn(`sysctl shell command to check for macOS Rosetta environment failed: ${e}`);
+         }
+         // allow arm64 macs to install universal or rosetta2(x64) - https://github.com/electron-userland/electron-builder/pull/5524
+-        const isArm64 = (file) => { var _a; return (file.url.pathname.includes("arm64") || ((_a = file.info.url) === null || _a === void 0 ? void 0 : _a.includes("arm64"))); };
++        const isArm64 = (file) => { var _a; return file.url.pathname.includes("arm64") || ((_a = file.info.url) === null || _a === void 0 ? void 0 : _a.includes("arm64")); };
+         if (files.some(isArm64)) {
+             files = files.filter(file => (process.arch === "arm64" || isRosetta) === isArm64(file));
+         }
+diff --git a/node_modules/electron-updater/out/providerFactory.js b/node_modules/electron-updater/out/providerFactory.js
+index 17f8a58..97ef46c 100644
+--- a/node_modules/electron-updater/out/providerFactory.js
++++ b/node_modules/electron-updater/out/providerFactory.js
+@@ -5,6 +5,7 @@ const builder_util_runtime_1 = require("builder-util-runtime");
+ const BintrayProvider_1 = require("./providers/BintrayProvider");
+ const GenericProvider_1 = require("./providers/GenericProvider");
+ const GitHubProvider_1 = require("./providers/GitHubProvider");
++const KeygenProvider_1 = require("./providers/KeygenProvider");
+ const PrivateGitHubProvider_1 = require("./providers/PrivateGitHubProvider");
+ function isUrlProbablySupportMultiRangeRequests(url) {
+     return !url.includes("s3.amazonaws.com");
+@@ -27,6 +28,8 @@ function createClient(data, updater, runtimeOptions) {
+                 return new PrivateGitHubProvider_1.PrivateGitHubProvider(githubOptions, updater, token, runtimeOptions);
+             }
+         }
++        case "keygen":
++            return new KeygenProvider_1.KeygenProvider(data, updater, runtimeOptions);
+         case "s3":
+         case "spaces":
+             return new GenericProvider_1.GenericProvider({
+diff --git a/node_modules/electron-updater/out/providers/KeygenProvider.js b/node_modules/electron-updater/out/providers/KeygenProvider.js
+new file mode 100644
+index 0000000..1a6b34d
+--- /dev/null
++++ b/node_modules/electron-updater/out/providers/KeygenProvider.js
+@@ -0,0 +1,47 @@
++"use strict";
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.KeygenProvider = void 0;
++const builder_util_runtime_1 = require("builder-util-runtime");
++const util_1 = require("../util");
++const Provider_1 = require("./Provider");
++class KeygenProvider extends Provider_1.Provider {
++    constructor(configuration, updater, runtimeOptions) {
++        super({
++            ...runtimeOptions,
++            isUseMultipleRangeRequest: false,
++        });
++        this.configuration = configuration;
++        this.updater = updater;
++        this.baseUrl = util_1.newBaseUrl(`https://api.keygen.sh/v1/accounts/${this.configuration.account}/artifacts`);
++    }
++    getDefaultChannelName() {
++        return this.getCustomChannelName("stable");
++    }
++    get channel() {
++        const result = this.updater.channel || this.configuration.channel;
++        return result == null ? this.getDefaultChannelName() : this.getCustomChannelName(result);
++    }
++    async getLatestVersion() {
++        const cancellationToken = new builder_util_runtime_1.CancellationToken();
++        const channelFile = util_1.getChannelFilename(this.channel);
++        const channelUrl = util_1.newUrlFromBase(channelFile, this.baseUrl, this.updater.isAddNoCacheQuery);
++        try {
++            const updateInfo = await this.httpRequest(channelUrl, {
++                Accept: "application/vnd.api+json",
++            }, cancellationToken);
++            return Provider_1.parseUpdateInfo(updateInfo, channelFile, channelUrl);
++        }
++        catch (e) {
++            throw builder_util_runtime_1.newError(`Unable to find latest version on ${this.toString()}, please ensure release exists: ${e.stack || e.message}`, "ERR_UPDATER_LATEST_VERSION_NOT_FOUND");
++        }
++    }
++    resolveFiles(updateInfo) {
++        return Provider_1.resolveFiles(updateInfo, this.baseUrl);
++    }
++    toString() {
++        const { account, product, platform } = this.configuration;
++        return `Keygen (account: ${account}, product: ${product}, platform: ${platform}, channel: ${this.channel})`;
++    }
++}
++exports.KeygenProvider = KeygenProvider;
++//# sourceMappingURL=KeygenProvider.js.map
+\ No newline at end of file
