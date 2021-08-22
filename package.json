@@ -10,6 +10,7 @@
     "url": "https://github.com/keygen-sh"
   },
   "scripts": {
+    "install": "patch-package",
     "postinstall": "electron-builder install-app-deps",
     "start": "electron .",
     "dev": "concurrently --kill-others --success first 'rm -rf build/ && parcel watch ./src/index.html -d build/ --public-url ./ --target electron --no-hmr' 'sleep 1 && yarn start'",
@@ -66,6 +67,7 @@
     "electron-log": "^4.4.1",
     "electron-updater": "^4.4.6",
     "node-machine-id": "^1.1.12",
+    "patch-package": "^6.4.7",
     "react": "^17.0.1",
     "react-dom": "^17.0.1"
   },
