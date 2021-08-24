@@ -1,19 +1,18 @@
 diff --git a/node_modules/builder-util-runtime/out/httpExecutor.js b/node_modules/builder-util-runtime/out/httpExecutor.js
-index f283a46..50fba71 100644
+index f283a46..cdfcc62 100644
 --- a/node_modules/builder-util-runtime/out/httpExecutor.js
 +++ b/node_modules/builder-util-runtime/out/httpExecutor.js
-@@ -40,6 +40,10 @@ class HttpError extends Error {
+@@ -40,6 +40,9 @@ class HttpError extends Error {
          this.name = "HttpError";
          this.code = `HTTP_ERROR_${statusCode}`;
      }
-+    // Check if 500 error
 +    isServerError() {
-+        return this.statusCode % 500 <= 99;
++        return this.statusCode >= 500 && this.statusCode <= 599;
 +    }
  }
  exports.HttpError = HttpError;
  function parseJson(result) {
-@@ -52,11 +56,20 @@ class HttpExecutor {
+@@ -52,11 +55,20 @@ class HttpExecutor {
      }
      request(options, cancellationToken = new CancellationToken_1.CancellationToken(), data) {
          configureRequestOptions(options);
@@ -38,6 +37,14 @@ index f283a46..50fba71 100644
          }
          return this.doApiRequest(options, cancellationToken, it => {
              ;
+@@ -97,6 +109,7 @@ class HttpExecutor {
+         });
+     }
+     handleResponse(response, options, cancellationToken, resolve, reject, redirectCount, requestProcessor) {
++        var _a;
+         if (debug.enabled) {
+             debug(`Response: ${response.statusCode} ${response.statusMessage}, request options: ${safeStringifyJson(options)}`);
+         }
 @@ -105,7 +118,7 @@ class HttpExecutor {
              // error is clear, we don't need to read detailed error description
              reject(createHttpError(response, `method: ${options.method || "GET"} url: ${options.protocol || "https:"}//${options.hostname}${options.port ? `:${options.port}` : ""}${options.path}
@@ -47,7 +54,19 @@ index f283a46..50fba71 100644
  `));
              return;
          }
-@@ -132,7 +145,11 @@ Please double check that your authentication token is correct. Due to security r
+@@ -114,8 +127,10 @@ Please double check that your authentication token is correct. Due to security r
+             resolve();
+             return;
+         }
++        const code = (_a = response.statusCode) !== null && _a !== void 0 ? _a : 0;
++        const shouldRedirect = code >= 300 && code < 400;
+         const redirectUrl = safeGetHeader(response, "location");
+-        if (redirectUrl != null) {
++        if (shouldRedirect && redirectUrl != null) {
+             if (redirectCount > this.maxRedirects) {
+                 reject(this.createMaxRedirectError());
+                 return;
+@@ -132,7 +147,11 @@ Please double check that your authentication token is correct. Due to security r
                  if (response.statusCode != null && response.statusCode >= 400) {
                      const contentType = safeGetHeader(response, "content-type");
                      const isJson = contentType != null && (Array.isArray(contentType) ? contentType.find(it => it.includes("json")) != null : contentType.includes("json"));
@@ -60,7 +79,7 @@ index f283a46..50fba71 100644
                  }
                  else {
                      resolve(data.length === 0 ? null : data);
-@@ -254,7 +271,7 @@ Please double check that your authentication token is correct. Due to security r
+@@ -254,7 +273,7 @@ Please double check that your authentication token is correct. Due to security r
      static prepareRedirectUrlOptions(redirectUrl, options) {
          const newOptions = configureRequestOptionsFromUrl(redirectUrl, { ...options });
          const headers = newOptions.headers;
@@ -69,7 +88,7 @@ index f283a46..50fba71 100644
              const parsedNewUrl = new url_1.URL(redirectUrl);
              if (parsedNewUrl.hostname.endsWith(".amazonaws.com") || parsedNewUrl.searchParams.has("X-Amz-Credential")) {
                  delete headers.authorization;
-@@ -262,6 +279,19 @@ Please double check that your authentication token is correct. Due to security r
+@@ -262,6 +281,19 @@ Please double check that your authentication token is correct. Due to security r
          }
          return newOptions;
      }
@@ -89,7 +108,7 @@ index f283a46..50fba71 100644
  }
  exports.HttpExecutor = HttpExecutor;
  function configureRequestOptionsFromUrl(url, options) {
-@@ -389,7 +419,7 @@ function configureRequestOptions(options, token, method) {
+@@ -389,7 +421,7 @@ function configureRequestOptions(options, token, method) {
      const headers = options.headers;
      if (token != null) {
          ;
@@ -98,7 +117,7 @@ index f283a46..50fba71 100644
      }
      if (headers["User-Agent"] == null) {
          headers["User-Agent"] = "electron-builder";
-@@ -406,7 +436,8 @@ function configureRequestOptions(options, token, method) {
+@@ -406,7 +438,8 @@ function configureRequestOptions(options, token, method) {
  exports.configureRequestOptions = configureRequestOptions;
  function safeStringifyJson(data, skippedNames) {
      return JSON.stringify(data, (name, value) => {

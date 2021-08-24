@@ -25,7 +25,7 @@ index c63e072..55a9886 100644
      async deleteRelease(isForce = false) {
 diff --git a/node_modules/app-builder-lib/out/publish/KeygenPublisher.js b/node_modules/app-builder-lib/out/publish/KeygenPublisher.js
 new file mode 100644
-index 0000000..367fae4
+index 0000000..66f1814
 --- /dev/null
 +++ b/node_modules/app-builder-lib/out/publish/KeygenPublisher.js
 @@ -0,0 +1,101 @@
@@ -95,7 +95,7 @@ index 0000000..367fae4
 +                attributes: {
 +                    filename: fileName,
 +                    filetype: path.extname(fileName),
-+                    // filesize: dataLength,
++                    filesize: dataLength,
 +                    version: this.version,
 +                    platform: this.info.platform,
 +                    channel: this.info.channel || "stable",
