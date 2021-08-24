@@ -36,7 +36,10 @@ ipcMain.on('CHECK_FOR_UPDATES', async (_event, license) => {
   }
   
   autoUpdater.addAuthHeader(`Bearer ${license?.attributes?.metadata?.token ?? ''}`)
-  autoUpdater.checkForUpdates()
+  autoUpdater.checkForUpdatesAndNotify({
+    body: 'hellooooo. there is an update',
+    title: "hell yeah"
+  })
 })
 
 async function createWindow() {
